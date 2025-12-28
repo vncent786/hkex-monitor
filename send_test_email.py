@@ -1,0 +1,167 @@
+import os
+import smtplib
+from email.message import EmailMessage
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+from datetime import datetime
+
+# Email configuration
+EMAIL_SENDER = "vincentsnews@gmail.com"
+EMAIL_RECEIVER = "vincewong99@gmail.com"
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+SMTP_PASSWORD = os.getenv("HKEX_EMAIL_PASS")
+
+
+def send_test_email():
+    """Send a test email with the word 'hello'."""
+    msg = EmailMessage()
+    msg["From"] = EMAIL_SENDER
+    msg["To"] = EMAIL_RECEIVER
+    msg["Subject"] = "hello"
+
+    msg.set_content("hello")
+
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(EMAIL_SENDER, SMTP_PASSWORD)
+        server.send_message(msg)
+        print("Email sent successfully")
+
+
+def fetch_disclosures_via_url(stock_code, start_date, end_date):
+    """
+    Fetch disclosures from the HKEX DI website using the structured URL.
+
+    Args:
+        stock_code (str): The stock code to search for.
+        start_date (str): The start date for the search in 'YYYY-MM-DD' format.
+        end_date (str): The end date for the search in 'YYYY-MM-DD' format.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the disclosure data.
+    """
+    # Construct the URL with the stock code and date range
+    url = (
+        f"https://di.hkex.com.hk/di/NSAllFormList.aspx?sa2=an&sid=972&corpn=Lai+Sun+Development+Co.+Ltd."
+        f"&sd={start_date}&ed={end_date}&cid=0&sa1=cl&scsd={start_date.replace('/', '%2f')}"
+        f"&sced={end_date.replace('/', '%2f')}&sc={stock_code}&src=MAIN&lang=EN&g_lang=en&"
+    )
+
+    print(url)
+
+    # Fetch the page content
+    response = requests.get(url)
+    response.raise_for_status()  # Raise an error for HTTP issues
+
+    # Parse the page content
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    # Extract the main table
+    main_table = []
+    debenture_details = []
+    table = soup.find('table', {'id': 'grdPaging'})  # Updated table ID
+    if table:
+        rows = table.find_all('tr')[1:]  # Skip header row
+        for row in rows:
+            cols = row.find_all('td')
+            main_table.append({
+                'Form Serial Number': cols[0].text.strip(),
+                'Name of Substantial Shareholder / Director / Chief Executive': cols[1].text.strip(),
+                'Reason for Disclosure': cols[2].text.strip(),
+                'Number of Shares Bought / Sold / Involved': cols[3].text.strip(),
+                'Average Price Per Share': cols[4].text.strip(),
+                'Number of Shares Interested': cols[5].text.strip(),
+                '% of Issued Voting Shares': cols[6].text.strip(),
+                'Date of Relevant Event': cols[7].text.strip(),
+                'Interests in Shares of Associated Corporation': cols[8].text.strip(),
+                'Interests in Debentures': cols[9].text.strip()
+            })
+
+            # If 'Interests in Debentures' is 'Yes', fetch the debenture details
+            if cols[9].text.strip().lower() == 'yes':
+                link = cols[9].find('a')['href']  # Extract the link to the debenture details
+
+                # Ensure the link has the correct scheme
+                if not link.startswith("http"):
+                    link = f"https://di.hkex.com.hk/di/{link}"  # Prepend base URL
+
+                debenture_response = requests.get(link)
+                debenture_response.raise_for_status()
+                debenture_soup = BeautifulSoup(debenture_response.content, 'html.parser')
+
+                debenture_table = debenture_soup.find('table', {'id': 'grdPaging'})
+                if debenture_table:
+                    debenture_rows = debenture_table.find_all('tr')[1:]  # Skip header row
+                    for debenture_row in debenture_rows:
+                        debenture_cols = debenture_row.find_all('td')
+                        debenture_details.append({
+                            'Form Serial Number': debenture_cols[0].text.strip(),
+                            'Name of Listed Corporation / Associated Corporation': debenture_cols[1].text.strip(),
+                            'Amount of Debentures Bought / Sold / Involved': debenture_cols[2].text.strip(),
+                            'Reason for Disclosure': debenture_cols[3].text.strip(),
+                            'Average Price Per Unit': debenture_cols[4].text.strip(),
+                            'Date of Relevant Event': debenture_cols[5].text.strip()
+                        })
+
+    main_df = pd.DataFrame(main_table)
+    debenture_df = pd.DataFrame(debenture_details)
+
+    return main_df, debenture_df
+
+
+def format_dataframe_as_html(df):
+    """
+    Convert a Pandas DataFrame to an HTML table.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to convert.
+
+    Returns:
+        str: HTML representation of the DataFrame.
+    """
+    if df.empty:
+        return "<p>No data available.</p>"
+    return df.to_html(index=False, escape=False)
+
+
+if __name__ == "__main__":
+    # Scrape data for Lai Sun Development (stock code: 488)
+    stock_code = "488"
+    start_date = "01/01/2025"
+    end_date = "28/12/2025"
+
+    main_df, debenture_df = fetch_disclosures_via_url(stock_code, start_date, end_date)
+
+    # Format the data as HTML
+    main_table_html = format_dataframe_as_html(main_df)
+    debenture_table_html = format_dataframe_as_html(debenture_df)
+
+    # Update the email content
+    msg = EmailMessage()
+    msg["From"] = EMAIL_SENDER
+    msg["To"] = EMAIL_RECEIVER
+    msg["Subject"] = f"HKEX DI Data for Stock Code {stock_code}"
+
+    email_body = f"""
+    <html>
+        <body>
+            <h1>HKEX DI Data for Stock Code {stock_code}</h1>
+            <h2>Main Table</h2>
+            {main_table_html}
+            <h2>Debenture Details</h2>
+            {debenture_table_html}
+        </body>
+    </html>
+    """
+
+    msg.set_content("This email contains HTML content. Please view it in an HTML-compatible email client.")
+    msg.add_alternative(email_body, subtype="html")
+
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(EMAIL_SENDER, SMTP_PASSWORD)
+        server.send_message(msg)
+
+    print("Email sent successfully")

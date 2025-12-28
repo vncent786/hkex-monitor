@@ -26,9 +26,10 @@ import os
 import json
 import pandas as pd
 from datetime import datetime
-from playwright.sync_api import sync_playwright
 from email.message import EmailMessage
 import smtplib
+import requests
+from bs4 import BeautifulSoup
 
 # Constants
 STOCK_CODE = "488"
@@ -45,63 +46,43 @@ SMTP_PASSWORD = os.getenv("HKEX_EMAIL_PASS")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 def fetch_disclosures():
-    """Fetch disclosures from the HKEX DI website."""
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-        page = context.new_page()
-        page.goto(BASE_URL)
+    """
+    Fetch disclosures from the HKEX DI website using a simplified URL structure.
+    """
+    # Construct the URL with the stock code and date range
+    start_date = "01/01/2025"
+    end_date = datetime.now().strftime("%d/%m/%Y")
+    url = (
+        f"https://di.hkex.com.hk/di/NSAllFormList.aspx?sa2=an&sid=972&corpn=Lai+Sun+Development+Co.+Ltd."
+        f"&sd={start_date}&ed={end_date}&cid=0&sa1=cl&scsd={start_date.replace('/', '%2f')}"
+        f"&sced={end_date.replace('/', '%2f')}&sc={STOCK_CODE}&src=MAIN&lang=EN&g_lang=en&"
+    )
 
-        # Fill in search form
-        page.fill("#txtStockCode", STOCK_CODE)
-        page.fill("#txtDateFrom", "2025-01-01")
-        page.fill("#txtDateTo", datetime.now().strftime("%Y-%m-%d"))
-        page.click("#btnSearch")
+    # Fetch the page content
+    response = requests.get(url)
+    response.raise_for_status()  # Raise an error for HTTP issues
 
-        # Wait for results table
-        page.wait_for_selector("#tblList")
+    # Parse the page content
+    soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Extract main table
-        rows = page.query_selector_all("#tblList tr")
-        data = []
-        for row in rows[1:]:  # Skip header row
-            cells = row.query_selector_all("td")
-            data.append({
-                "Name": cells[0].inner_text().strip(),
-                "Capacity": cells[1].inner_text().strip(),
-                "Nature of Interest": cells[2].inner_text().strip(),
-                "Number of Debentures": cells[3].inner_text().strip(),
-                "Interest in Debentures": cells[4].inner_text().strip(),
-                "Date of Notice": cells[5].inner_text().strip(),
+    # Extract the main table
+    main_table = []
+    table = soup.find('table', {'id': 'tblList'})
+    if table:
+        rows = table.find_all('tr')[1:]  # Skip header row
+        for row in rows:
+            cols = row.find_all('td')
+            main_table.append({
+                'Name': cols[0].text.strip(),
+                'Capacity': cols[1].text.strip(),
+                'Nature of Interest': cols[2].text.strip(),
+                'Number of Debentures': cols[3].text.strip() if len(cols) > 3 else None,
+                'Interest in Debentures': cols[4].text.strip(),
+                'Date of Notice': cols[5].text.strip()
             })
 
-        main_table = pd.DataFrame(data)
-
-        # Extract debenture detail tables
-        debenture_details = []
-        for i, row in enumerate(data):
-            if row["Interest in Debentures"].lower() == "yes":
-                page.click(f"#tblList tr:nth-child({i + 2}) a")  # Click disclosure link
-                page.wait_for_selector("#tblDebenture")
-
-                detail_rows = page.query_selector_all("#tblDebenture tr")
-                detail_data = []
-                for detail_row in detail_rows[1:]:  # Skip header row
-                    detail_cells = detail_row.query_selector_all("td")
-                    detail_data.append([cell.inner_text().strip() for cell in detail_cells])
-
-                debenture_details.append({
-                    "Person": row["Name"],
-                    "Stock Code": STOCK_CODE,
-                    "Disclosure Date": row["Date of Notice"],
-                    "Details": pd.DataFrame(detail_data),
-                })
-
-                page.go_back()
-
-        browser.close()
-
-    return main_table, debenture_details
+    main_df = pd.DataFrame(main_table)
+    return main_df
 
 def save_data(main_table, debenture_details):
     """Save extracted data to JSON files."""
