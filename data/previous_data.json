@@ -1,0 +1,118 @@
+{
+    "488": {
+        "main_table": [
+            {
+                "Form Serial Number": "",
+                "Name of Substantial Shareholder / Director / Chief Executive": "Lam Kin Ngok, Peter",
+                "Reason for Disclosure": "",
+                "Number of Shares Bought / Sold / Involved": "",
+                "Average Price Per Share": "",
+                "Number of Shares Interested": "",
+                "% of Issued Voting Shares": "",
+                "Date of Relevant Event": "",
+                "Interests in Shares of Associated Corporation": "Yes",
+                "Interests in Debentures": "Yes"
+            },
+            {
+                "Form Serial Number": "DA20250310E00300",
+                "Name of Substantial Shareholder / Director / Chief Executive": "Lau Shu Yan, Julius",
+                "Reason for Disclosure": "1706(L)",
+                "Number of Shares Bought / Sold / Involved": "",
+                "Average Price Per Share": "",
+                "Number of Shares Interested": "592,875(L)",
+                "% of Issued Voting Shares": "0.04(L)",
+                "Date of Relevant Event": "01/03/2025",
+                "Interests in Shares of Associated Corporation": "",
+                "Interests in Debentures": ""
+            }
+        ],
+        "debenture_table": [
+            {
+                "Form Serial Number": "DD20251229E00313",
+                "Name of Listed Corporation / Associated Corporation": "Lai Sun MTN Limited",
+                "Amount of Debentures Bought / Sold / Involved": "500,000",
+                "Reason for Disclosure": "1101",
+                "Average Price Per Unit": "USD 149,800.0000",
+                "Date of Relevant Event": "24/12/2025"
+            },
+            {
+                "Form Serial Number": "DD20251229E00309",
+                "Name of Listed Corporation / Associated Corporation": "Lai Sun MTN Limited",
+                "Amount of Debentures Bought / Sold / Involved": "1,200,000",
+                "Reason for Disclosure": "1101",
+                "Average Price Per Unit": "USD 146,327.0000",
+                "Date of Relevant Event": "23/12/2025"
+            },
+            {
+                "Form Serial Number": "DD20251229E00306",
+                "Name of Listed Corporation / Associated Corporation": "Lai Sun MTN Limited",
+                "Amount of Debentures Bought / Sold / Involved": "3,000,000",
+                "Reason for Disclosure": "1101",
+                "Average Price Per Unit": "USD 144,175.0000",
+                "Date of Relevant Event": "22/12/2025"
+            },
+            {
+                "Form Serial Number": "DD20251218E00345",
+                "Name of Listed Corporation / Associated Corporation": "Lai Sun MTN Limited",
+                "Amount of Debentures Bought / Sold / Involved": "600,000",
+                "Reason for Disclosure": "1201",
+                "Average Price Per Unit": "USD 148,000.0000",
+                "Date of Relevant Event": "15/12/2025"
+            },
+            {
+                "Form Serial Number": "DD20251216E00279",
+                "Name of Listed Corporation / Associated Corporation": "Lai Sun MTN Limited",
+                "Amount of Debentures Bought / Sold / Involved": "3,000,000",
+                "Reason for Disclosure": "1201",
+                "Average Price Per Unit": "USD 148,833.0000",
+                "Date of Relevant Event": "12/12/2025"
+            },
+            {
+                "Form Serial Number": "DD20251216E00278",
+                "Name of Listed Corporation / Associated Corporation": "Lai Sun MTN Limited",
+                "Amount of Debentures Bought / Sold / Involved": "3,500,000",
+                "Reason for Disclosure": "1201",
+                "Average Price Per Unit": "USD 150,257.0000",
+                "Date of Relevant Event": "11/12/2025"
+            }
+        ]
+    },
+    "17": {
+        "main_table": [
+            {
+                "Form Serial Number": "",
+                "Name of Substantial Shareholder / Director / Chief Executive": "CHAN YIU HO",
+                "Reason for Disclosure": "",
+                "Number of Shares Bought / Sold / Involved": "",
+                "Average Price Per Share": "",
+                "Number of Shares Interested": "",
+                "% of Issued Voting Shares": "",
+                "Date of Relevant Event": "",
+                "Interests in Shares of Associated Corporation": "",
+                "Interests in Debentures": "Yes"
+            },
+            {
+                "Form Serial Number": "DA20250704E00028",
+                "Name of Substantial Shareholder / Director / Chief Executive": "CHENG CHI KONG",
+                "Reason for Disclosure": "1706(L)",
+                "Number of Shares Bought / Sold / Involved": "2,559,118(L)",
+                "Average Price Per Share": "",
+                "Number of Shares Interested": "2,559,118(L)",
+                "% of Issued Voting Shares": "0.10(L)",
+                "Date of Relevant Event": "01/07/2025",
+                "Interests in Shares of Associated Corporation": "",
+                "Interests in Debentures": ""
+            }
+        ],
+        "debenture_table": [
+            {
+                "Form Serial Number": "DD20251212E00004",
+                "Name of Listed Corporation / Associated Corporation": "NWD (MTN) Limited",
+                "Amount of Debentures Bought / Sold / Involved": "",
+                "Reason for Disclosure": "1705",
+                "Average Price Per Unit": "",
+                "Date of Relevant Event": "12/12/2025"
+            }
+        ]
+    }
+}
