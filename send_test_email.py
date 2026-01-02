@@ -183,13 +183,6 @@ if __name__ == "__main__":
     # Load previous data
     previous_data = load_previous_data(previous_data_file)
 
-    # Initialize email body
-    email_body = """
-    <html>
-        <body>
-            <h1>HKEX DI Data for {datetime.now().strftime('%d/%m/%Y')}</h1>
-    """
-
     # Initialize a dictionary to store current data
     current_data = {}
 
@@ -208,45 +201,26 @@ if __name__ == "__main__":
             "debenture_table": debenture_df.to_dict(orient="records")
         }
 
-        # Format the data as HTML
-        main_table_html = format_dataframe_as_html(main_df)
-        debenture_table_html = format_dataframe_as_html(debenture_df)
-
-        # Append company data to email body
-        email_body += f"""
-            <h2>{company_name.replace('+', ' ')} (Stock Code: {stock_code})</h2>
-            <h3>Main Table</h3>
-            {main_table_html}
-            <h3>Debenture Details</h3>
-            {debenture_table_html}
-        """
-
-    email_body += """
-        </body>
-    </html>
-    """
-
     # Detect changes
-    if detect_changes(previous_data, current_data):
-        print("Changes detected. Sending notification email.")
+    changes_detected = detect_changes(previous_data, current_data)
 
-        # Update the email content
-        msg = EmailMessage()
-        msg["From"] = EMAIL_SENDER
-        msg["To"] = EMAIL_RECEIVER
-        msg["Subject"] = f"HKEX DI Data Updated for {datetime.now().strftime('%d/%m/%Y')}"
+    # Update the email content
+    msg = EmailMessage()
+    msg["From"] = EMAIL_SENDER
+    msg["To"] = EMAIL_RECEIVER
+    msg["Subject"] = f"HKEX DI Data for {datetime.now().strftime('%d/%m/%Y')}"
 
-        msg.set_content("This email contains HTML content. Please view it in an HTML-compatible email client.")
-        msg.add_alternative(email_body, subtype="html")
+    msg.set_content("This email contains HTML content. Please view it in an HTML-compatible email client.")
+    msg.add_alternative(email_body, subtype="html")
 
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(EMAIL_SENDER, SMTP_PASSWORD)
-            server.send_message(msg)
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(EMAIL_SENDER, SMTP_PASSWORD)
+        server.send_message(msg)
 
-        print("Notification email sent successfully.")
-
+    if changes_detected:
+        print("Changes detected. Notification email sent successfully.")
         # Save the current data
         save_current_data(previous_data_file, current_data)
     else:
-        print("No changes detected. No email sent.")
+        print("No changes detected. Email sent for manual verification.")
