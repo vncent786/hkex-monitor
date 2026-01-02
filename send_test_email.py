@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
+import json
 
 # Email configuration
 EMAIL_SENDER = "vincentsnews@gmail.com"
@@ -147,6 +148,25 @@ def get_company_name(stock_code):
         raise ValueError(f"Company name not found for stock code {stock_code}")
 
 
+def load_previous_data(file_path):
+    """Load the previously saved data from a JSON file."""
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            return json.load(file)
+    return {}
+
+
+def save_current_data(file_path, data):
+    """Save the current data to a JSON file."""
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=4)
+
+
+def detect_changes(previous_data, current_data):
+    """Detect changes between previous and current data."""
+    return previous_data != current_data
+
+
 if __name__ == "__main__":
     # Define a list of tickers with internal system ID, stock code, and company name
     tickers = [
@@ -157,44 +177,64 @@ if __name__ == "__main__":
     start_date = "01/01/2025"
     end_date = "28/12/2025"
 
+    # Define the path to save previous data
+    previous_data_file = "data/previous_data.json"
+
+    # Load previous data
+    previous_data = load_previous_data(previous_data_file)
+
+    # Initialize email body
+    email_body = """
+    <html>
+        <body>
+            <h1>HKEX DI Data for {datetime.now().strftime('%d/%m/%Y')}</h1>
+    """
+
+    # Initialize a dictionary to store current data
+    current_data = {}
+
     for ticker in tickers:
         hkex_sid = ticker["hkex_sid"]
         stock_code = ticker["stock_code"]
         company_name = ticker["company_name"]
 
-        # Construct the URL with the stock code and date range
-        url = (
-            f"https://di.hkex.com.hk/di/NSAllFormList.aspx?sa2=an&sid={hkex_sid}&corpn={company_name}"
-            f"&sd={start_date}&ed={end_date}&cid=0&sa1=cl&scsd={start_date.replace('/', '%2f')}"
-            f"&sced={end_date.replace('/', '%2f')}&sc={stock_code}&src=MAIN&lang=EN&g_lang=en&"
-        )
-
         print(f"Fetching data for {company_name.replace('+', ' ')} (Stock Code: {stock_code})")
-        print(f"URL: {url}")
 
         main_df, debenture_df = fetch_disclosures_via_url(stock_code, start_date, end_date)
+
+        # Store the data in the current_data dictionary
+        current_data[stock_code] = {
+            "main_table": main_df.to_dict(orient="records"),
+            "debenture_table": debenture_df.to_dict(orient="records")
+        }
 
         # Format the data as HTML
         main_table_html = format_dataframe_as_html(main_df)
         debenture_table_html = format_dataframe_as_html(debenture_df)
 
+        # Append company data to email body
+        email_body += f"""
+            <h2>{company_name.replace('+', ' ')} (Stock Code: {stock_code})</h2>
+            <h3>Main Table</h3>
+            {main_table_html}
+            <h3>Debenture Details</h3>
+            {debenture_table_html}
+        """
+
+    email_body += """
+        </body>
+    </html>
+    """
+
+    # Detect changes
+    if detect_changes(previous_data, current_data):
+        print("Changes detected. Sending notification email.")
+
         # Update the email content
         msg = EmailMessage()
         msg["From"] = EMAIL_SENDER
         msg["To"] = EMAIL_RECEIVER
-        msg["Subject"] = f"HKEX DI Data for Stock Code {stock_code} ({company_name.replace('+', ' ')})"
-
-        email_body = f"""
-        <html>
-            <body>
-                <h1>HKEX DI Data for Stock Code {stock_code} ({company_name.replace('+', ' ')})</h1>
-                <h2>Main Table</h2>
-                {main_table_html}
-                <h2>Debenture Details</h2>
-                {debenture_table_html}
-            </body>
-        </html>
-        """
+        msg["Subject"] = f"HKEX DI Data Updated for {datetime.now().strftime('%d/%m/%Y')}"
 
         msg.set_content("This email contains HTML content. Please view it in an HTML-compatible email client.")
         msg.add_alternative(email_body, subtype="html")
@@ -204,4 +244,9 @@ if __name__ == "__main__":
             server.login(EMAIL_SENDER, SMTP_PASSWORD)
             server.send_message(msg)
 
-        print(f"Email sent successfully for {company_name.replace('+', ' ')}")
+        print("Notification email sent successfully.")
+
+        # Save the current data
+        save_current_data(previous_data_file, current_data)
+    else:
+        print("No changes detected. No email sent.")
