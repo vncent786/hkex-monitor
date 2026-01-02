@@ -9,7 +9,7 @@ import json
 
 # Email configuration
 EMAIL_SENDER = "vincentsnews@gmail.com"
-EMAIL_RECEIVER = "vincewong99@gmail.com"
+EMAIL_RECEIVERS = ["vincewong99@gmail.com", "vincent.wong@nb.com"]
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_PASSWORD = os.getenv("HKEX_EMAIL_PASS")
@@ -19,7 +19,7 @@ def send_test_email():
     """Send a test email with the word 'hello'."""
     msg = EmailMessage()
     msg["From"] = EMAIL_SENDER
-    msg["To"] = EMAIL_RECEIVER
+    msg["To"] = ", ".join(EMAIL_RECEIVERS)
     msg["Subject"] = "hello"
 
     msg.set_content("hello")
@@ -226,7 +226,7 @@ if __name__ == "__main__":
     # Update the email content
     msg = EmailMessage()
     msg["From"] = EMAIL_SENDER
-    msg["To"] = EMAIL_RECEIVER
+    msg["To"] = ", ".join(EMAIL_RECEIVERS)
     msg["Subject"] = f"HKEX DI Data for {datetime.now().strftime('%d/%m/%Y')}"
 
     msg.set_content("This email contains HTML content. Please view it in an HTML-compatible email client.")
