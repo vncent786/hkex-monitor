@@ -44,12 +44,10 @@ def fetch_disclosures_via_url(stock_code, start_date, end_date):
     """
     # Construct the URL with the stock code and date range
     url = (
-        f"https://di.hkex.com.hk/di/NSAllFormList.aspx?sa2=an&sid=972&corpn=Lai+Sun+Development+Co.+Ltd."
+        f"https://di.hkex.com.hk/di/NSAllFormList.aspx?sa2=an&sid={hkex_sid}&corpn={company_name}"
         f"&sd={start_date}&ed={end_date}&cid=0&sa1=cl&scsd={start_date.replace('/', '%2f')}"
         f"&sced={end_date.replace('/', '%2f')}&sc={stock_code}&src=MAIN&lang=EN&g_lang=en&"
     )
-
-    print(url)
 
     # Fetch the page content
     response = requests.get(url)
@@ -126,42 +124,84 @@ def format_dataframe_as_html(df):
     return df.to_html(index=False, escape=False)
 
 
+def get_company_name(stock_code):
+    """
+    Fetch the company name listed in HKEX for the given stock code.
+
+    Args:
+        stock_code (str): The stock code to search for.
+
+    Returns:
+        str: The company name listed in HKEX.
+    """
+    url = f"https://di.hkex.com.hk/di/NSSrchCorp.aspx?src=MAIN&lang=EN&g_lang=en&sc={stock_code}"
+    response = requests.get(url)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    # Extract the company name from the page
+    company_name_element = soup.find('span', {'id': 'lblCorpName'})
+    if company_name_element:
+        return company_name_element.text.strip()
+    else:
+        raise ValueError(f"Company name not found for stock code {stock_code}")
+
+
 if __name__ == "__main__":
-    # Scrape data for Lai Sun Development (stock code: 488)
-    stock_code = "488"
+    # Define a list of tickers with internal system ID, stock code, and company name
+    tickers = [
+        {"hkex_sid": "972", "stock_code": "488", "company_name": "Lai+Sun+Development+Co.+Ltd."},
+        {"hkex_sid": "27", "stock_code": "17", "company_name": "New+World+Development+Co.+Ltd."}
+    ]
+
     start_date = "01/01/2025"
     end_date = "28/12/2025"
 
-    main_df, debenture_df = fetch_disclosures_via_url(stock_code, start_date, end_date)
+    for ticker in tickers:
+        hkex_sid = ticker["hkex_sid"]
+        stock_code = ticker["stock_code"]
+        company_name = ticker["company_name"]
 
-    # Format the data as HTML
-    main_table_html = format_dataframe_as_html(main_df)
-    debenture_table_html = format_dataframe_as_html(debenture_df)
+        # Construct the URL with the stock code and date range
+        url = (
+            f"https://di.hkex.com.hk/di/NSAllFormList.aspx?sa2=an&sid={hkex_sid}&corpn={company_name}"
+            f"&sd={start_date}&ed={end_date}&cid=0&sa1=cl&scsd={start_date.replace('/', '%2f')}"
+            f"&sced={end_date.replace('/', '%2f')}&sc={stock_code}&src=MAIN&lang=EN&g_lang=en&"
+        )
 
-    # Update the email content
-    msg = EmailMessage()
-    msg["From"] = EMAIL_SENDER
-    msg["To"] = EMAIL_RECEIVER
-    msg["Subject"] = f"HKEX DI Data for Stock Code {stock_code}"
+        print(f"Fetching data for {company_name.replace('+', ' ')} (Stock Code: {stock_code})")
+        print(f"URL: {url}")
 
-    email_body = f"""
-    <html>
-        <body>
-            <h1>HKEX DI Data for Stock Code {stock_code}</h1>
-            <h2>Main Table</h2>
-            {main_table_html}
-            <h2>Debenture Details</h2>
-            {debenture_table_html}
-        </body>
-    </html>
-    """
+        main_df, debenture_df = fetch_disclosures_via_url(stock_code, start_date, end_date)
 
-    msg.set_content("This email contains HTML content. Please view it in an HTML-compatible email client.")
-    msg.add_alternative(email_body, subtype="html")
+        # Format the data as HTML
+        main_table_html = format_dataframe_as_html(main_df)
+        debenture_table_html = format_dataframe_as_html(debenture_df)
 
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-        server.starttls()
-        server.login(EMAIL_SENDER, SMTP_PASSWORD)
-        server.send_message(msg)
+        # Update the email content
+        msg = EmailMessage()
+        msg["From"] = EMAIL_SENDER
+        msg["To"] = EMAIL_RECEIVER
+        msg["Subject"] = f"HKEX DI Data for Stock Code {stock_code} ({company_name.replace('+', ' ')})"
 
-    print("Email sent successfully")
+        email_body = f"""
+        <html>
+            <body>
+                <h1>HKEX DI Data for Stock Code {stock_code} ({company_name.replace('+', ' ')})</h1>
+                <h2>Main Table</h2>
+                {main_table_html}
+                <h2>Debenture Details</h2>
+                {debenture_table_html}
+            </body>
+        </html>
+        """
+
+        msg.set_content("This email contains HTML content. Please view it in an HTML-compatible email client.")
+        msg.add_alternative(email_body, subtype="html")
+
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(EMAIL_SENDER, SMTP_PASSWORD)
+            server.send_message(msg)
+
+        print(f"Email sent successfully for {company_name.replace('+', ' ')}")
