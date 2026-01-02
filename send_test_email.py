@@ -186,6 +186,13 @@ if __name__ == "__main__":
     # Initialize a dictionary to store current data
     current_data = {}
 
+    # Initialize email body
+    email_body = """
+    <html>
+        <body>
+            <h1>HKEX DI Data for {datetime.now().strftime('%d/%m/%Y')}</h1>
+    """
+
     for ticker in tickers:
         hkex_sid = ticker["hkex_sid"]
         stock_code = ticker["stock_code"]
@@ -195,11 +202,23 @@ if __name__ == "__main__":
 
         main_df, debenture_df = fetch_disclosures_via_url(stock_code, start_date, end_date)
 
-        # Store the data in the current_data dictionary
-        current_data[stock_code] = {
-            "main_table": main_df.to_dict(orient="records"),
-            "debenture_table": debenture_df.to_dict(orient="records")
-        }
+        # Format the data as HTML
+        main_table_html = format_dataframe_as_html(main_df)
+        debenture_table_html = format_dataframe_as_html(debenture_df)
+
+        # Append company data to email body
+        email_body += f"""
+            <h2>{company_name.replace('+', ' ')} (Stock Code: {stock_code})</h2>
+            <h3>Main Table</h3>
+            {main_table_html}
+            <h3>Debenture Details</h3>
+            {debenture_table_html}
+        """
+
+    email_body += """
+        </body>
+    </html>
+    """
 
     # Detect changes
     changes_detected = detect_changes(previous_data, current_data)
